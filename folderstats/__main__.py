@@ -29,6 +29,10 @@ def main():
         dest='ignore_hidden', default=False,
         help='ignore hidden files and folders, Linux and Unix only',
         required=False)
+    parser.add_argument('-l', action='store_true',
+        dest='ignore_symlinks', default=False,
+        help='ignore symlinks, Linux and Unix only',
+        required=False)
     parser.add_argument('-p', action='store_true',
         dest='parent', default=False,
         help='Add index and parent index',
@@ -54,6 +58,7 @@ def main():
                                  microseconds=args.microseconds,
                                  absolute_paths=args.absolute_paths,
                                  ignore_hidden=args.ignore_hidden,
+                                 ignore_symlinks=args.ignore_symlinks,
                                  parent=args.parent,
                                  verbose=args.verbose)
 

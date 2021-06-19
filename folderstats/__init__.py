@@ -1,9 +1,11 @@
-__version__ = "0.3.0"
+__version__ = "0.3.3"
 
 import os
 import hashlib
 import pandas as pd
 from datetime import datetime
+from pwd import getpwuid
+from grp import getgrgid
 
 
 def calculate_hash(filepath, hash_name):
@@ -11,8 +13,8 @@ def calculate_hash(filepath, hash_name):
 
     hash_name = hash_name.lower()
     if not hasattr(hashlib, hash_name):
-        raise Exception('Hash algorithm not available : {}'\
-            .format(hash_name))
+        raise Exception('Hash algorithm not available : {}' \
+                        .format(hash_name))
 
     with open(filepath, 'rb') as f:
         checksum = getattr(hashlib, hash_name)()
@@ -23,7 +25,7 @@ def calculate_hash(filepath, hash_name):
 
 
 def _recursive_folderstats(folderpath, items=None, hash_name=None,
-                           ignore_hidden=False, depth=0, idx=1, parent_idx=0,
+                           ignore_hidden=False, ignore_symlinks=False, depth=0, idx=1, parent_idx=0,
                            verbose=False):
     """Helper function that recursively collects folder statistics and returns current id, foldersize and number of files traversed."""
     items = items if items is not None else []
@@ -36,6 +38,10 @@ def _recursive_folderstats(folderpath, items=None, hash_name=None,
                 continue
 
             filepath = os.path.join(folderpath, f)
+
+            if ignore_symlinks and os.path.islink(filepath):
+                continue
+
             stats = os.stat(filepath)
             foldersize += stats.st_size
             idx += 1
@@ -54,7 +60,7 @@ def _recursive_folderstats(folderpath, items=None, hash_name=None,
                 extension = extension[1:] if extension else None
                 item = [idx, filepath, filename, extension, stats.st_size,
                         stats.st_atime, stats.st_mtime, stats.st_ctime,
-                        False, None, depth, current_idx, stats.st_uid]
+                        False, None, depth, current_idx, getpwuid(stats.st_uid).pw_name, getgrgid(stats.st_gid).gr_name]
                 if hash_name:
                     item.append(calculate_hash(filepath, hash_name))
                 items.append(item)
@@ -64,7 +70,7 @@ def _recursive_folderstats(folderpath, items=None, hash_name=None,
     foldername = os.path.basename(folderpath)
     item = [current_idx, folderpath, foldername, None, foldersize,
             stats.st_atime, stats.st_mtime, stats.st_ctime,
-            True, num_files, depth, parent_idx, stats.st_uid]
+            True, num_files, depth, parent_idx, getpwuid(stats.st_uid).pw_name, getgrgid(stats.st_gid).gr_name]
     if hash_name:
         item.append(None)
     items.append(item)
@@ -73,12 +79,12 @@ def _recursive_folderstats(folderpath, items=None, hash_name=None,
 
 
 def folderstats(folderpath, hash_name=None, microseconds=False,
-                absolute_paths=False, ignore_hidden=False, parent=True,
+                absolute_paths=False, ignore_hidden=False, ignore_symlinks=False, parent=True,
                 verbose=False):
     """Function that returns a Pandas dataframe from the folders and files from a selected folder."""
     columns = ['id', 'path', 'name', 'extension', 'size',
                'atime', 'mtime', 'ctime',
-               'folder', 'num_files', 'depth', 'parent', 'uid']
+               'folder', 'num_files', 'depth', 'parent', 'uid', 'gid']
     if hash_name:
         hash_name = hash_name.lower()
         columns.append(hash_name)
@@ -87,6 +93,7 @@ def folderstats(folderpath, hash_name=None, microseconds=False,
         folderpath,
         hash_name=hash_name,
         ignore_hidden=ignore_hidden,
+        ignore_symlinks=ignore_symlinks,
         verbose=verbose)
     df = pd.DataFrame(items, columns=columns)
 
