@@ -1,4 +1,4 @@
-__version__ = "0.3.3"
+__version__ = "0.3.4"
 
 import os
 import hashlib
@@ -52,7 +52,7 @@ def _recursive_folderstats(folderpath, items=None, hash_name=None,
 
                 idx, items, _foldersize, _num_files = _recursive_folderstats(
                     filepath, items, hash_name,
-                    ignore_hidden, depth + 1, idx, current_idx, verbose)
+                    ignore_hidden, ignore_symlinks, depth + 1, idx, current_idx, verbose)
                 foldersize += _foldersize
                 num_files += _num_files
             else:
